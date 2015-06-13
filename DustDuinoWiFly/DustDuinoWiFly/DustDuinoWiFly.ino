@@ -49,15 +49,16 @@ const char server[] = "YOUR SERVER ADDRESS";
 void setup(){
   Serial.begin(9600);
   wifly.begin(&Serial, NULL);
-  pinMode(8, INPUT);
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
   wdt_enable(WDTO_8S);
   starttime = millis();
 }
 
 void loop(){
   
-  valP1 = digitalRead(8);
-  valP2 = digitalRead(9);
+  valP1 = digitalRead(3);
+  valP2 = digitalRead(2);
   
   if(valP1 == LOW && triggerP1 == false){
     triggerP1 = true;
