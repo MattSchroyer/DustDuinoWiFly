@@ -1,17 +1,20 @@
-// DUSTDUINO WIFLY SKETCH
-// Version 3
-// By Matthew Schroyer
-// 4/26/2014
-
-
-// REMEMBER TO SET THEESE TO YOUR OWN PROJECT
+// DUSTDUINO v1.0
+// Released 18 October 2013
 //
-#define APIKEY         "??????" // your cosm api key
-#define FEEDID         01234567890 // your feed ID
-#define USERAGENT      "DustDuino" // user agent is the project name
+// This software is released as-is, without warranty,
+// under a Creative Commons Attribution-ShareAlike
+// 3.0 Unported license. For more information about
+// this license, visit:
+// http://creativecommons.org/licenses/by-sa/3.0/
 //
-//
+// Written by Matthew Schroyer, except where specified.
+// For more information on building a DustDuino, visit:
+// http://www.mentalmunition.com/2013/10/measure-air-pollution-with-dustduino-of.html
 
+/*888888888888888888888888888888888888888888888888888888888888888888888888888888888888*/
+
+// WiFlyHQ Library written by Harlequin-Tech.
+// Available at: https://github.com/harlequin-tech/WiFlyHQ
 #include <WiFlyHQ.h>
 #include <avr/wdt.h>
 
@@ -40,21 +43,21 @@ float countP2;
 WiFly wifly;
 void terminal();
 
-const char server[] = "api.xively.com";
+const char ARDUINO_KEY[] = "YOUR ARDUINO KEY";
+const char server[] = "YOUR SERVER ADDRESS";
 
 void setup(){
   Serial.begin(9600);
   wifly.begin(&Serial, NULL);
-  pinMode(2, INPUT);
-  pinMode(3, INPUT);
+  pinMode(8, INPUT);
   wdt_enable(WDTO_8S);
   starttime = millis();
 }
 
 void loop(){
   
-  valP1 = digitalRead(3);
-  valP2 = digitalRead(2);
+  valP1 = digitalRead(8);
+  valP2 = digitalRead(9);
   
   if(valP1 == LOW && triggerP1 == false){
     triggerP1 = true;
@@ -82,22 +85,29 @@ void loop(){
   
     wdt_reset();
 
-    
+    // Function creates particle count and mass concentration
+    // from PPD-42 low pulse occupancy (LPO).
     if ((millis() - starttime) > sampletime_ms) {
       
-      ratioP1 = durationP1/(sampletime_ms*10.0);  // Integer percentage 0=>100
+      // Generates PM10 and PM2.5 count from LPO.
+      // Derived from code created by Chris Nafis
+      // http://www.howmuchsnow.com/arduino/airquality/grovedust/
+      
+      ratioP1 = durationP1/(sampletime_ms*10.0);
       ratioP2 = durationP2/(sampletime_ms*10.0);
       countP1 = 1.1*pow(ratioP1,3)-3.8*pow(ratioP1,2)+520*ratioP1+0.62;
       countP2 = 1.1*pow(ratioP2,3)-3.8*pow(ratioP2,2)+520*ratioP2+0.62;
-      int PM10count = countP2;
-      int PM25count = countP1 - countP2;
+      float PM10count = countP2;
+      float PM25count = countP1 - countP2;
       
-      if(PM25count < 0){
-        PM25count = 0;
-      }
+      // Assues density, shape, and size of dust
+      // to estimate mass concentration from particle
+      // count. This method was described in a 2009
+      // paper by Uva, M., Falcone, R., McClellan, A.,
+      // and Ostapowicz, E.
+      // http://wireless.ece.drexel.edu/research/sd_air_quality.pdf
       
-      // converts particle counts into concentration
-      // first, PM10 conversion
+      // begins PM10 mass concentration algorithm
       double r10 = 2.6*pow(10,-6);
       double pi = 3.14159;
       double vol10 = (4/3)*pi*pow(r10,3);
@@ -105,7 +115,8 @@ void loop(){
       double mass10 = density*vol10;
       double K = 3531.5;
       float concLarge = (PM10count)*K*mass10;
-      // next, PM2.5 conversion
+      
+      // next, PM2.5 mass concentration algorithm
       double r25 = 0.44*pow(10,-6);
       double vol25 = (4/3)*pi*pow(r25,3);
       double mass25 = density*vol25;
@@ -120,70 +131,65 @@ void loop(){
     }
   }
   
-  // Makes a HTTP connection to the server and sends data:
+    // WiFly HTTP connection to the Xively server.
+    // Patchube client originally written 15 March 2010 by Tom Igoe,
+    // Usman Haque, and Joe Saavedra at http://arduino.cc/en/Tutorial/PachubeCient
+    // Modified to work with WiFly RN-XV and the OpenDustMap.org REST API as
+    // created by the Earth Journalism Network and Development Seed https://developmentseed.org/
 void sendData(int PM10Conc, int PM25Conc, int PM10count, int PM25count) {
-
-  // Forms the data into a message to send to Xively:
-  
-    String DuinoData;
-    DuinoData = "PM10,";
-    DuinoData = DuinoData + PM10Conc;
-    DuinoData = DuinoData + '\r';
-    DuinoData = DuinoData + '\n';
-    DuinoData = DuinoData + "PM25,";
-    DuinoData = DuinoData + PM25Conc;
-    DuinoData = DuinoData + '\r';
-    DuinoData = DuinoData + '\n';
-    DuinoData = DuinoData + "PM10count,";
-    DuinoData = DuinoData + PM10count;
-    DuinoData = DuinoData + '\r';
-    DuinoData = DuinoData + '\n';
-    DuinoData = DuinoData + "PM25count,";
-    DuinoData = DuinoData + PM25count;
-    DuinoData = DuinoData + '\r';
-    DuinoData = DuinoData + '\n';
-                        
     wifly.open(server, 80);
-    wifly.print("PUT /v2/feeds/");
-    wifly.print(FEEDID);
-    wifly.println(".csv HTTP/1.1");
-    wifly.println("Host: api.xively.com");
-    wifly.print("X-ApiKey: ");
-    wifly.println(APIKEY);
-    wifly.print("User-Agent: ");
-    wifly.println(USERAGENT);
+    wifly.println("POST /api/v1/readings/ HTTP/1.1");
+    wifly.print("Host: "); wifly.println(server);
+    wifly.print("Authorization: Token ");wifly.println(ARDUINO_KEY);
+    wifly.println("User-Agent: Arduino/1.0");
+    wifly.print("Accept: *");wifly.print("/");wifly.println("*");
+    wifly.println("Referer:");
     wifly.print("Content-Length: ");
 
-    // calculate the length of the sensor reading in bytes:
-    int messageLength = DuinoData.length();
-    wifly.println(messageLength);
+    // Calculates the length of the sensor reading in bytes:
+    int thisLength = 33 + getLength(PM10Conc) + getLength(PM25Conc) + getLength(PM10count) + getLength(PM25count);
+    wifly.println(thisLength);
 
-    // last pieces of the HTTP PUT request:
-    wifly.println("Content-Type: text/csv");
+    // last pieces of the HTTP POST request:
+    wifly.println("Content-Type: application/x-www-form-urlencoded");
     wifly.println("Connection: close");
-    wifly.println();                  
+    wifly.println();
 
-    // here's the actual content of the PUT request:
-    wifly.print(DuinoData);
+    // here's the actual content of the POST request:
+    wifly.print("pm10=");
+    wifly.print(PM10Conc);
+    wifly.print("&pm25=");
+    wifly.print(PM25Conc);
+    wifly.print("&pm10count=");
+    wifly.print(PM10count);
+    wifly.print("&pm25count=");
+    wifly.println(PM25count);
     wifly.close();
 }
   
+  // This function also is derived from
+  // the Patchube client sketch. Returns
+  // number of digits, which Xively needs
+  // to post data correctly.
   int getLength(int someValue) {
-  // there's at least one byte:
+  
   int digits = 1;
-  // continually divide the value by ten, 
-  // adding one to the digit count for each
-  // time you divide, until you're at 0:
+  if (someValue < 0) {
+    someValue = someValue * -1;
+    digits = 2;
+  }
   int dividend = someValue /10;
   while (dividend > 0) {
     dividend = dividend /10;
     digits++;
   }
-  // return the number of digits:
   return digits;
 }
 
-/* Connect the WiFly serial to the serial monitor. */
+// This function connects the WiFly to serial.
+// Developed by Harlequin-Tech for the WiFlyHQ library.
+// https://github.com/harlequin-tech/WiFlyHQ
+
 void terminal()
 {
     while (1) {
