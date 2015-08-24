@@ -1,12 +1,12 @@
 // DUSTDUINO WIFLY SKETCH
-// Version 3
+// Version 4
 // By Matthew Schroyer
-// 4/26/2014
+// 8/24/2015
 
 
 // REMEMBER TO SET THEESE TO YOUR OWN PROJECT
 //
-#define APIKEY         "??????" // your cosm api key
+#define APIKEY         "??????" // your xively api key
 #define FEEDID         01234567890 // your feed ID
 #define USERAGENT      "DustDuino" // user agent is the project name
 //
@@ -52,6 +52,8 @@ void setup(){
 }
 
 void loop(){
+  
+  digitalWrite(7) = HIGH;
   
   valP1 = digitalRead(3);
   valP2 = digitalRead(2);
