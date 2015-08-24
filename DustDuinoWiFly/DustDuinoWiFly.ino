@@ -1,5 +1,6 @@
 // DUSTDUINO v1.0
 // Released 18 October 2013
+// Last Updated 24 August 2015
 //
 // This software is released as-is, without warranty,
 // under a Creative Commons Attribution-ShareAlike
@@ -49,15 +50,18 @@ const char server[] = "YOUR SERVER ADDRESS";
 void setup(){
   Serial.begin(9600);
   wifly.begin(&Serial, NULL);
-  pinMode(8, INPUT);
+  pinMode(3, INPUT);
+  pinMode(2, INPUT);
   wdt_enable(WDTO_8S);
   starttime = millis();
 }
 
 void loop(){
   
-  valP1 = digitalRead(8);
-  valP2 = digitalRead(9);
+  digitalWrite(7) = HIGH;
+  
+  valP1 = digitalRead(3);
+  valP2 = digitalRead(2);
   
   if(valP1 == LOW && triggerP1 == false){
     triggerP1 = true;
@@ -136,7 +140,8 @@ void loop(){
     // Usman Haque, and Joe Saavedra at http://arduino.cc/en/Tutorial/PachubeCient
     // Modified to work with WiFly RN-XV and the OpenDustMap.org REST API as
     // created by the Earth Journalism Network and Development Seed https://developmentseed.org/
-void sendData(int PM10Conc, int PM25Conc, int PM10count, int PM25count) {
+
+    void sendData(int PM10Conc, int PM25Conc, int PM10count, int PM25count) {
     wifly.open(server, 80);
     wifly.println("POST /api/v1/readings/ HTTP/1.1");
     wifly.print("Host: "); wifly.println(server);
