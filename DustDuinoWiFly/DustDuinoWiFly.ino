@@ -1,6 +1,6 @@
 // DUSTDUINO v1.0
 // Released 18 October 2013
-// Last Updated 24 August 2015
+// Last Updated 30 August 2015
 //
 // This software is released as-is, without warranty,
 // under a Creative Commons Attribution-ShareAlike
@@ -44,8 +44,8 @@ float countP2;
 WiFly wifly;
 void terminal();
 
-const char ARDUINO_KEY[] = "YOUR ARDUINO KEY";
-const char server[] = "YOUR SERVER ADDRESS";
+const char ARDUINO_KEY[] = "YOUR-API-KEY-RECEIVED-BY-EMAIL";
+const char server[] = "api.opendustmap.com";
 
 void setup(){
   Serial.begin(9600);
@@ -170,6 +170,11 @@ void loop(){
     wifly.print("&pm25count=");
     wifly.println(PM25count);
     wifly.close();
+    
+    // this will reboot the RN171 module after every message sent
+    // note: may cause full reset of Arduino if shield is used
+    // Added 8/20/2015
+    wifly.reboot();
 }
   
   // This function also is derived from
